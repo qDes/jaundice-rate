@@ -1,7 +1,17 @@
 import aiohttp
 import asyncio
+import pymorphy2
 
 from adapters.inosmi_ru import sanitize
+from aionursery import Nursery
+from enum import Enum
+from text_tools import calculate_jaundice_rate, split_by_words
+from text_tools import load_charged_words
+
+
+class ProcessingStatus(Enum):
+    OK = 'OK'
+    FETCH_ERROR = 'FETCH_ERROR'
 
 
 async def fetch(session, url):
@@ -10,11 +20,35 @@ async def fetch(session, url):
         return await response.text()
 
 
+async def process_article(session, morph, charged_words, url, title):
+    html = await fetch(session, url)
+    sanitized_html = sanitize(html, plaintext=True)
+    article_words = split_by_words(morph, sanitized_html)
+    score = calculate_jaundice_rate(article_words, charged_words)
+    words_count = len(article_words)
+    return (title, score, words_count)
+
+
 async def main():
+    TEST_ARTICLES = ['https://inosmi.ru/politic/20200119/246646205.html',
+            'https://inosmi.ru/social/20200119/246596410.html',
+            'https://inosmi.ru/social/20200119/246642707.html',
+            'https://inosmi.ru/social/20200119/246644975.html',
+            'http://sasifsd45eegdfi.com'
+            ]
+    morph = pymorphy2.MorphAnalyzer()
+    charged_words = load_charged_words('charged_dict/negative_words.txt')
     async with aiohttp.ClientSession() as session:
-        html = await fetch(session, "https://inosmi.ru/economic/20190629/245384784.html")
-        sanitized_html = sanitize(html, plaintext=True)
-        print(sanitized_html)
+        async with Nursery() as nursery:
+            tasks = []
+            for num, url in enumerate(TEST_ARTICLES):
+                task = nursery.start_soon(process_article(session, morph, 
+                    charged_words, url, f'{num}'))
+                tasks.append(task)
+            results = await asyncio.wait(tasks)
+        for result in results[0]:
+            print(result.result())
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
