@@ -20,6 +20,12 @@ def split_by_words(morph, text):
     return words
 
 
+def load_charged_words(filename):
+    with open(filename, 'r') as file_:
+        words = file_.read().split('\n')
+    return words
+
+
 def test_split_by_words():
     # Экземпляры MorphAnalyzer занимают 10-15Мб RAM т.к. загружают в память много данных
     # Старайтесь организовать свой код так, чтоб создавать экземпляр MorphAnalyzer заранее и в единственном числе
