@@ -3,6 +3,7 @@ import asyncio
 import pymorphy2
 
 from adapters.inosmi_ru import sanitize
+from adapters.exceptions import ArticleNotFound
 from aionursery import Nursery
 from aiohttp.client_exceptions import ClientConnectionError
 from enum import Enum
@@ -13,6 +14,7 @@ from text_tools import load_charged_words
 class ProcessingStatus(Enum):
     OK = 'OK'
     FETCH_ERROR = 'FETCH_ERROR'
+    PARSING_ERROR = 'PARSING_ERROR'
 
     def __str__(self):
         return str(self.value)
@@ -34,6 +36,8 @@ async def process_article(session, morph, charged_words, url, title):
         status = ProcessingStatus.OK
     except ClientConnectionError:
         return (title, ProcessingStatus.FETCH_ERROR, None, None)
+    except ArticleNotFound:
+        return (title, ProcessingStatus.PARSING_ERROR, None, None)
     return (title,status, score, words_count)
 
 
@@ -52,7 +56,8 @@ async def main():
             'https://inosmi.ru/social/20200119/246596410.html',
             'https://inosmi.ru/social/20200119/246642707.html',
             'https://inosmi.ru/social/20200119/246644975.html',
-            'http://sasifsd45eegdfi.com'
+            'http://sasifsd45eegdfi.com',
+            'https://lenta.ru/news/2020/01/24/voting/'
             ]
     morph = pymorphy2.MorphAnalyzer()
     charged_words = load_charged_words('charged_dict/negative_words.txt')
