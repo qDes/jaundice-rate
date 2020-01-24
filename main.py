@@ -6,6 +6,7 @@ from adapters.inosmi_ru import sanitize
 from adapters.exceptions import ArticleNotFound
 from aionursery import Nursery
 from aiohttp.client_exceptions import ClientConnectionError
+from async_timeout import timeout
 from enum import Enum
 from text_tools import calculate_jaundice_rate, split_by_words
 from text_tools import load_charged_words
@@ -15,6 +16,7 @@ class ProcessingStatus(Enum):
     OK = 'OK'
     FETCH_ERROR = 'FETCH_ERROR'
     PARSING_ERROR = 'PARSING_ERROR'
+    TIMEOUT = 'TIMEOUT'
 
     def __str__(self):
         return str(self.value)
@@ -28,7 +30,8 @@ async def fetch(session, url):
 
 async def process_article(session, morph, charged_words, url, title):
     try:
-        html = await fetch(session, url)
+        async with timeout(1.5) as tm:
+            html = await fetch(session, url)
         sanitized_html = sanitize(html, plaintext=True)
         article_words = split_by_words(morph, sanitized_html)
         score = calculate_jaundice_rate(article_words, charged_words)
@@ -38,6 +41,8 @@ async def process_article(session, morph, charged_words, url, title):
         return (title, ProcessingStatus.FETCH_ERROR, None, None)
     except ArticleNotFound:
         return (title, ProcessingStatus.PARSING_ERROR, None, None)
+    except asyncio.TimeoutError:
+        return (title, ProcessingStatus.TIMEOUT, None, None)
     return (title,status, score, words_count)
 
 
