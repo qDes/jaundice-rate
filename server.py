@@ -1,17 +1,21 @@
-from aiohttp import web
+import json
+
+from aiohttp import http_exceptions, web
+from main import fetch_articles_scores
 
 
 async def handle(request):
-    urls = request.query.get('urls').split(',')
-    #print((data.keys()))
-    #print(urls.split(','))
-    resp = {'urls': urls}
-    return web.json_response(resp)
+    try:
+        urls = request.query.get('urls').split(',')
+        print(urls)
+        scores = await fetch_articles_scores(urls)
+        return web.json_response(scores)
+    except AttributeError:
+        return web.Response(text='sasi')
 
 
 app = web.Application()
 app.add_routes([web.get('/', handle),
-                #web.get('/{name}', handle)
                 ])
 
 
