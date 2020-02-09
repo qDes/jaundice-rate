@@ -37,7 +37,7 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def process_article(session, morph, charged_words, url, title):
+async def process_article(session, morph, charged_words, url):
     score = None
     words_count = None
     time_analyze = None
@@ -45,7 +45,7 @@ async def process_article(session, morph, charged_words, url, title):
         async with timeout(1.5) as tm:
             html = await fetch(session, url)
         sanitized_html = sanitize(html, plaintext=True)
-        async with timeout(1) as tm:
+        async with timeout(3) as tm:
             article_words, time_analyze = await analyzator(morph, sanitized_html)
         score = calculate_jaundice_rate(article_words, charged_words)
         words_count = len(article_words)
@@ -56,7 +56,7 @@ async def process_article(session, morph, charged_words, url, title):
         status = ProcessingStatus.PARSING_ERROR
     except asyncio.TimeoutError:
         status = ProcessingStatus.TIMEOUT
-    return (title,status, score, words_count, time_analyze)
+    return (status, url, score, words_count, time_analyze)
 
 
 def process_results(results):
@@ -70,6 +70,28 @@ def process_results(results):
         print()
 
 
+async def fetch_articles_scores(urls):
+    FORMAT = "%(levelname)s:root: %(message)s"
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+    morph = pymorphy2.MorphAnalyzer()
+    charged_words = load_charged_words('charged_dict/negative_words.txt')
+    async with aiohttp.ClientSession() as session:
+        async with Nursery() as nursery:
+            tasks = []
+            for num, url in enumerate(urls):
+                task = nursery.start_soon(process_article(session, morph, 
+                    charged_words, url))
+                tasks.append(task)
+            results = await asyncio.wait(tasks)
+    scores = []    
+    for result in results[0]:
+        scores.append({"status": str(result.result()[0]),
+            "url": result.result()[1],
+            "score": result.result()[2],
+            "words_count": result.result()[3]})
+        logging.debug(f"Analyze time {str(result.result()[4])}")
+    return scores
+
 
 async def main():
     TEST_ARTICLES = ['https://inosmi.ru/politic/20200119/246646205.html',
@@ -79,6 +101,9 @@ async def main():
             'http://sasifsd45eegdfi.com',
             'https://lenta.ru/news/2020/01/24/voting/'
             ]
+    results = await fetch_articles_scores(TEST_ARTICLES)
+    print(results)
+    '''
     FORMAT = "%(levelname)s:root: %(message)s"
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     morph = pymorphy2.MorphAnalyzer()
@@ -91,11 +116,12 @@ async def main():
                     charged_words, url, f'{num}'))
                 tasks.append(task)
             results = await asyncio.wait(tasks)
-        for result in results[0]:
-            print(result.result())
-
-        process_results(results[0])
-
+        
+    for result in results[0]:
+        print(result.result())
+    
+    process_results(results[0])
+    '''
 
 if __name__ == "__main__":
     asyncio.run(main())
