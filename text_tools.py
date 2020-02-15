@@ -1,38 +1,24 @@
 import asyncio
 import pymorphy2
 import string
-import time
-import logging
-
-from contextlib import contextmanager
 
 
 def _clean_word(word):
     word = word.replace('«', '').replace('»', '').replace('…', '')
-    # FIXME какие еще знаки пунктуации часто встречаются ?
+    word = word.replace(".", '').replace(",", '').replace("-", '')
     word = word.strip(string.punctuation)
     return word
-
-
-@contextmanager
-def timer():
-    init_time = time.monotonic()
-    try:
-        yield
-    finally:
-        logging.info(time.monotonic() - init_time)
 
 
 async def split_by_words(morph, text):
     """Учитывает знаки пунктуации, регистр и словоформы, выкидывает предлоги."""
     words = []
-    with timer():
-        for word in text.split():
-            cleaned_word = _clean_word(word)
-            normalized_word = morph.parse(cleaned_word)[0].normal_form
-            if len(normalized_word) > 2 or normalized_word == 'не':
-                words.append(normalized_word)
-            await asyncio.sleep(0)
+    for word in text.split():
+        cleaned_word = _clean_word(word)
+        normalized_word = morph.parse(cleaned_word)[0].normal_form
+        if len(normalized_word) > 2 or normalized_word == 'не':
+            words.append(normalized_word)
+        await asyncio.sleep(0)
     return words
 
 
