@@ -7,11 +7,14 @@ from main import fetch_articles_scores
 async def handle(request):
     try:
         urls = request.query.get('urls').split(',')
-        print(urls)
+        if len(urls) > 10:
+            response = {"error": "too many urls in request, should be 10 or less"}
+            return web.json_response(response, status=400)
         scores = await fetch_articles_scores(urls)
         return web.json_response(scores)
     except AttributeError:
-        return web.Response(text='sasi')
+        response = {"error": "no urls in request"}
+        return web.json_response(response) #web.Response(text='e')
 
 
 app = web.Application()
