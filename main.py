@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import logging
 import pymorphy2
+import pytest
 import time
 
 from adapters.inosmi_ru import sanitize
@@ -43,7 +44,6 @@ async def fetch(session, url):
 async def process_article(session, morph, charged_words, url):
     score = None
     words_count = None
-    time_analyze = None
     try:
         async with timeout(1.5):
             html = await fetch(session, url)
@@ -60,7 +60,29 @@ async def process_article(session, morph, charged_words, url):
         status = ProcessingStatus.PARSING_ERROR
     except asyncio.TimeoutError:
         status = ProcessingStatus.TIMEOUT
-    return (status, url, score, words_count, time_analyze)
+    return (status, url, score, words_count)
+
+@pytest.mark.asyncio
+async def test_process_article():
+    test_url1 = "https://inosmi.ru/politic/20200119/246646205.html"
+    test_response_1 = (ProcessingStatus.OK,
+                       "https://inosmi.ru/politic/20200119/246646205.html",
+                       1.03, 677)
+    morph = pymorphy2.MorphAnalyzer()
+    charged_words = load_charged_words('charged_dict/negative_words.txt')
+    async with aiohttp.ClientSession() as session:
+        response = await process_article(session, 
+                                         morph,
+                                         charged_words,
+                                         test_url1)
+        assert ProcessingStatus.OK  == response[0]
+        assert 1 < response[2] < 1.1
+        assert 670 < response[3] < 680
+        response = await process_article(session, 
+                                         morph,
+                                         charged_words,
+                                         "http://test_url")
+        assert ProcessingStatus.FETCH_ERROR == response[0]
 
 
 def print_results(results):
