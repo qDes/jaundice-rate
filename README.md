@@ -21,8 +21,8 @@ pip install -r requirements.txt
 ```python3
 python server.py
 ```
-Сервер запускается по адресу http://0.0.0.0:8080/ . Ссылки на статьи для анализа передаются в параметр urls.
-Например запрос http://0.0.0.0:8080/?urls=https://inosmi.ru/politic/20200119/246646205.html,https://lenta.ru/news/2020/02/10/afraid/
+Сервер запускается по адресу http://127.0.0.1:8080/ . Ссылки на статьи для анализа передаются в параметр urls.
+Например запрос http://127.0.0.1:8080/?urls=https://inosmi.ru/politic/20200119/246646205.html,https://lenta.ru/news/2020/02/10/afraid/
 возвращает ответ в формате json 
 ```json
 [{"status": "PARSING_ERROR", "url": "https://lenta.ru/news/2020/02/10/afraid/", "score": null, "words_count": null}, {"status": "OK", "url": "https://inosmi.ru/politic/20200119/246646205.html", "score": 1.04, "words_count": 673}]
