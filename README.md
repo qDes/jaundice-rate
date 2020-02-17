@@ -1,6 +1,6 @@
 # Фильтр желтушных новостей
 
-[TODO. Опишите проект, схему работы]
+Веб-сервер для анализа желтушности статей.<br>
 
 Пока поддерживается только один новостной сайт - [ИНОСМИ.РУ](https://inosmi.ru/). Для него разработан специальный адаптер, умеющий выделять текст статьи на фоне остальной HTML разметки. Для других новостных сайтов потребуются новые адаптеры, все они будут находиться в каталоге `adapters`. Туда же помещен код для сайта ИНОСМИ.PY: `adapters/inosmi_ru.py`.
 
@@ -19,12 +19,18 @@ pip install -r requirements.txt
 # Как запустить
 
 ```python3
-python main.py
+python server.py
+```
+Сервер запускается по адресу http://0.0.0.0:8080/ . Ссылки на статьи для анализа передаются в параметр urls.
+Например запрос http://0.0.0.0:8080/?urls=https://inosmi.ru/politic/20200119/246646205.html,https://lenta.ru/news/2020/02/10/afraid/
+возвращает ответ в формате json 
+```json
+[{"status": "PARSING_ERROR", "url": "https://lenta.ru/news/2020/02/10/afraid/", "score": null, "words_count": null}, {"status": "OK", "url": "https://inosmi.ru/politic/20200119/246646205.html", "score": 1.04, "words_count": 673}]
 ```
 
 # Как запустить тесты
 
-Для тестирования используется [pytest](https://docs.pytest.org/en/latest/), тестами покрыты фрагменты кода сложные в отладке: text_tools.py и адаптеры. Команды для запуска тестов:
+Для тестирования используется [pytest](https://docs.pytest.org/en/latest/), тестами покрыты фрагменты кода сложные в отладке: main.py, text_tools.py и адаптеры. Команды для запуска тестов:
 
 ```
 python -m pytest adapters/inosmi_ru.py
@@ -32,6 +38,10 @@ python -m pytest adapters/inosmi_ru.py
 
 ```
 python -m pytest text_tools.py
+```
+
+```
+python -m pytest main.py
 ```
 
 # Цели проекта
