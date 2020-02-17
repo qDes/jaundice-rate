@@ -86,15 +86,21 @@ async def test_process_article():
                                                      morph,
                                                      charged_words,
                                                      fetch_error_url)
-        timeout_error_response = await process_article(session,
+        timeout_fetch_response = await process_article(session,
                                                        morph,
                                                        charged_words,
                                                        ok_url,
                                                        fetch_timeout=0.1)
+        timeout_split_response = await process_article(session,
+                                                       morph,
+                                                       charged_words,
+                                                       ok_url,
+                                                       split_timeout=0.1)
         assert ProcessingStatus.OK == ok_response[0]
         assert ProcessingStatus.FETCH_ERROR == fetch_error_response[0]
         assert ProcessingStatus.PARSING_ERROR == parsing_error_response[0]
-        assert ProcessingStatus.TIMEOUT == timeout_error_response[0]
+        assert ProcessingStatus.TIMEOUT == timeout_fetch_response[0]
+        assert ProcessingStatus.TIMEOUT == timeout_split_response[0]
 
 
 def print_results(results):
