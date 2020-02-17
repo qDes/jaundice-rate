@@ -27,7 +27,7 @@ class ProcessingStatus(Enum):
 
 
 @contextmanager
-def timer():
+def count_time():
     init_time = time.monotonic()
     try:
         yield
@@ -41,15 +41,18 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def process_article(session, morph, charged_words, url):
+async def process_article(session, morph,
+                          charged_words, url,
+                          fetch_timeout=1.5,
+                          split_timeout=3):
     score = None
     words_count = None
     try:
-        async with timeout(1.5):
+        async with timeout(fetch_timeout):
             html = await fetch(session, url)
         sanitized_html = sanitize(html, plaintext=True)
-        with timer():
-            async with timeout(3):
+        with count_time():
+            async with timeout(split_timeout):
                 article_words = await split_by_words(morph, sanitized_html)
         score = calculate_jaundice_rate(article_words, charged_words)
         words_count = len(article_words)
@@ -62,27 +65,36 @@ async def process_article(session, morph, charged_words, url):
         status = ProcessingStatus.TIMEOUT
     return (status, url, score, words_count)
 
+
 @pytest.mark.asyncio
 async def test_process_article():
-    test_url1 = "https://inosmi.ru/politic/20200119/246646205.html"
-    test_response_1 = (ProcessingStatus.OK,
-                       "https://inosmi.ru/politic/20200119/246646205.html",
-                       1.03, 677)
+    ok_url = "https://inosmi.ru/social/20200119/246596410.html"
+    fetch_error_url = "http://siw54w35fsd45eegdfi.com/"
+    parsing_error_url = "https://lenta.ru/news/2020/01/24/voting/"
     morph = pymorphy2.MorphAnalyzer()
     charged_words = load_charged_words('charged_dict/negative_words.txt')
     async with aiohttp.ClientSession() as session:
-        response = await process_article(session, 
-                                         morph,
-                                         charged_words,
-                                         test_url1)
-        assert ProcessingStatus.OK  == response[0]
-        assert 1 < response[2] < 1.1
-        assert 670 < response[3] < 680
-        response = await process_article(session, 
-                                         morph,
-                                         charged_words,
-                                         "http://test_url")
-        assert ProcessingStatus.FETCH_ERROR == response[0]
+        ok_response = await process_article(session,
+                                            morph,
+                                            charged_words,
+                                            ok_url)
+        parsing_error_response = await process_article(session,
+                                                       morph,
+                                                       charged_words,
+                                                       parsing_error_url)
+        fetch_error_response = await process_article(session,
+                                                     morph,
+                                                     charged_words,
+                                                     fetch_error_url)
+        timeout_error_response = await process_article(session,
+                                                       morph,
+                                                       charged_words,
+                                                       ok_url,
+                                                       fetch_timeout=0.1)
+        assert ProcessingStatus.OK == ok_response[0]
+        assert ProcessingStatus.FETCH_ERROR == fetch_error_response[0]
+        assert ProcessingStatus.PARSING_ERROR == parsing_error_response[0]
+        assert ProcessingStatus.TIMEOUT == timeout_error_response[0]
 
 
 def print_results(results):
