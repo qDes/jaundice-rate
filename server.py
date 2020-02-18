@@ -1,5 +1,5 @@
 from aiohttp import web
-from main import fetch_articles_scores
+from article_tools import fetch_articles_scores
 
 
 async def handle(request):
