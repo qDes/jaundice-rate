@@ -114,8 +114,6 @@ def print_results(results):
 
 
 async def fetch_articles_scores(urls):
-    FORMAT = "%(levelname)s:root: %(message)s"
-    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     morph = pymorphy2.MorphAnalyzer()
     charged_words = load_charged_words('charged_dict/negative_words.txt')
     async with aiohttp.ClientSession() as session:
@@ -144,6 +142,8 @@ async def main():
                      'http://siw54w35fsd45eegdfi.com',
                      'https://lenta.ru/news/2020/01/24/voting/'
                      ]
+    FORMAT = "%(levelname)s:root: %(message)s"
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     results = await fetch_articles_scores(TEST_ARTICLES)
     print_results(results)
 
